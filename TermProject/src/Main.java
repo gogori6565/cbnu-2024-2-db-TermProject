@@ -11,8 +11,8 @@ public class Main {
 
             // Mysql 데이터베이스 연결
             Connection con = DriverManager.getConnection(
-                    "[url]",
-                    "[username]", "[password]");
+                    "jdbc:mysql://192.168.56.1:4567/club_management",
+                    "juhyeon", "1234");
             Scanner scanner = new Scanner(System.in);
 
             while (true) {
@@ -221,6 +221,7 @@ public class Main {
                     System.out.println("학번(SIN): ");
                     sin = scanner.nextInt();
 
+                    // 동아리 생성
                     PreparedStatement ps4_1 = con.prepareStatement(
                             "INSERT INTO Club (Cnum, Cname, Cnop) VALUES (?, ?, 1)");
                     ps4_1.setInt(1, cnumber);
@@ -229,10 +230,16 @@ public class Main {
 
                     // 동아리를 만들 경우, 학생의 Role(역할)은 President(회장)으로 변경됨
                     PreparedStatement ps4_2 = con.prepareStatement(
-                            "UPDATE Student SET Role = 'President', Cnumber = ? WHERE SIN = ?");
+                            "UPDATE Student SET Role = 'President', Cnumber = ?, Jdate = ? WHERE SIN = ?");
                     ps4_2.setInt(1, cnumber);
-                    ps4_2.setInt(2, sin);
+
+                    // 현재 날짜 가져오기
+                    java.sql.Date currentDate = new java.sql.Date(System.currentTimeMillis());
+                    ps4_2.setDate(2, currentDate);
+
+                    ps4_2.setInt(3, sin);
                     ps4_2.executeUpdate();
+
                     System.out.println("새 동아리가 생성되었습니다.");
                     break;
 
