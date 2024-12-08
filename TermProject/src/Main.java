@@ -1,4 +1,5 @@
 import java.sql.*;
+import java.time.LocalDate;
 import java.util.Scanner;
 
 public class Main {
@@ -12,11 +13,15 @@ public class Main {
             Connection con = DriverManager.getConnection(
                     "[url]",
                     "[username]", "[password]");
-            Statement stmt = con.createStatement();
             Scanner scanner = new Scanner(System.in);
 
             while (true) {
-                System.out.println("본인의 역할을 선택하세요 (1: 학생, 2: 동아리 관리자, 3: 교수, 0: 종료): ");
+                System.out.println("메뉴를 선택하세요: ");
+                System.out.println("1: 학생");
+                System.out.println("2: 동아리 관리자");
+                System.out.println("3: 교수");
+                System.out.println("4: 데이터 조회");
+                System.out.println("0: 종료");
                 int role = scanner.nextInt();
                 scanner.nextLine();
 
@@ -35,8 +40,11 @@ public class Main {
                     case 3: // 교수
                         handleProfessor(con, scanner);
                         break;
+                    case 4: // 데이터 조회
+                        handleDataInquiry(con, scanner);
+                        break;
                     default:
-                        System.out.println("잘못된 입력. 다시 선택해주세요.");
+                        System.out.println("잘못된 입력입니다. 다시 선택해주세요.");
                 }
             }
 
@@ -45,6 +53,79 @@ public class Main {
         } catch (Exception e) {
             System.out.println("에러 발생: " + e.getMessage());
             e.printStackTrace();
+        }
+    }
+
+    // 데이터 조회 기능
+    private static void handleDataInquiry(Connection con, Scanner scanner) throws SQLException {
+        while (true) {
+            System.out.println("조회할 데이터를 선택하세요: ");
+            System.out.println("1: 학생 리스트");
+            System.out.println("2: 동아리 리스트");
+            System.out.println("3: 프로젝트 리스트");
+            System.out.println("4: 교수 리스트");
+            System.out.println("0: 뒤로가기");
+            int choice = scanner.nextInt();
+            scanner.nextLine();
+
+            if (choice == 0) break;
+
+            switch (choice) {
+                case 1: // 학생 리스트 조회
+                    System.out.println("학생 리스트:");
+                    PreparedStatement ps1 = con.prepareStatement("SELECT * FROM Student");
+                    ResultSet rs1 = ps1.executeQuery();
+                    while (rs1.next()) {
+                        System.out.println("SIN: " + rs1.getInt("SIN") +
+                                ", Name: " + rs1.getString("Name") +
+                                ", Role: " + rs1.getString("Role") +
+                                ", Cnumber: " + rs1.getInt("Cnumber") +
+                                ", Jdate: " + rs1.getDate("Jdate"));
+                    }
+                    rs1.close();
+                    break;
+
+                case 2: // 동아리 리스트 조회
+                    System.out.println("동아리 리스트:");
+                    PreparedStatement ps2 = con.prepareStatement("SELECT * FROM Club");
+                    ResultSet rs2 = ps2.executeQuery();
+                    while (rs2.next()) {
+                        System.out.println("Cnum: " + rs2.getInt("Cnum") +
+                                ", Cname: " + rs2.getString("Cname") +
+                                ", Cnop: " + rs2.getInt("Cnop") +
+                                ", Anumber: " + rs2.getInt("Anumber"));
+                    }
+                    rs2.close();
+                    break;
+
+                case 3: // 프로젝트 리스트 조회
+                    System.out.println("프로젝트 리스트:");
+                    PreparedStatement ps3 = con.prepareStatement("SELECT * FROM Project");
+                    ResultSet rs3 = ps3.executeQuery();
+                    while (rs3.next()) {
+                        System.out.println("Pname: " + rs3.getString("Pname") +
+                                ", Cnumber: " + rs3.getInt("Cnumber") +
+                                ", Pdate: " + rs3.getString("Pdate") +
+                                ", Pnop: " + rs3.getInt("Pnop"));
+                    }
+                    rs3.close();
+                    break;
+
+                case 4: // 교수 리스트 조회
+                    System.out.println("교수 리스트:");
+                    PreparedStatement ps4 = con.prepareStatement("SELECT * FROM Advisor");
+                    ResultSet rs4 = ps4.executeQuery();
+                    while (rs4.next()) {
+                        System.out.println("Anum: " + rs4.getInt("Anum") +
+                                ", Aname: " + rs4.getString("Aname") +
+                                ", Email: " + rs4.getString("Email"));
+                    }
+                    rs4.close();
+                    break;
+
+                default:
+                    System.out.println("잘못된 입력입니다. 다시 선택해주세요.");
+            }
         }
     }
 
@@ -69,7 +150,7 @@ public class Main {
                     System.out.println("전화번호(Phone): ");
                     String phone = scanner.nextLine();
 
-                    // 단, 역할의 경우 본인이 직접 선택 X -> 자동으로 member(부원)로 설정됨
+                    // 학생의 역할은 자동으로 'member'로 설정
                     PreparedStatement ps1 = con.prepareStatement(
                             "INSERT INTO Student (SIN, Name, Sex, Phone, Role) VALUES (?, ?, ?, ?, 'member')");
                     ps1.setInt(1, sin);
@@ -78,7 +159,25 @@ public class Main {
                     ps1.setString(4, phone);
                     ps1.executeUpdate();
                     System.out.println("내 정보가 입력되었습니다.");
+
+                    // 학과 정보 입력
+                    System.out.println("학과 개수 입력: ");
+                    int departmentCount = scanner.nextInt();
+                    scanner.nextLine();
+                    for (int i = 0; i < departmentCount; i++) {
+                        System.out.println("학과 이름: ");
+                        String departmentName = scanner.nextLine();
+
+                        // 학생과 학과의 관계를 'Department' 테이블에 삽입
+                        PreparedStatement psDept = con.prepareStatement(
+                                "INSERT INTO Department (Ssin, Department) VALUES (?, ?)");
+                        psDept.setInt(1, sin);
+                        psDept.setString(2, departmentName);
+                        psDept.executeUpdate();
+                    }
+                    System.out.println("학과 정보가 입력되었습니다.");
                     break;
+
 
                 case 2: // 동아리 가입
                     System.out.println("학번(SIN): ");
@@ -86,11 +185,15 @@ public class Main {
                     System.out.println("가입할 동아리 번호(Cnumber): ");
                     int cnumber = scanner.nextInt();
 
+                    // 현재 날짜를 동아리 가입 날짜로 사용
+                    LocalDate joinDate = LocalDate.now();
                     PreparedStatement ps2 = con.prepareStatement(
-                            "UPDATE Student SET Cnumber = ? WHERE SIN = ?");
+                            "UPDATE Student SET Cnumber = ?, Jdate = ? WHERE SIN = ?");
                     ps2.setInt(1, cnumber);
-                    ps2.setInt(2, sin);
+                    ps2.setDate(2, Date.valueOf(joinDate)); // 현재 날짜로 설정
+                    ps2.setInt(3, sin);
                     ps2.executeUpdate();
+
                     System.out.println("동아리에 가입되었습니다.");
                     break;
 
@@ -144,7 +247,7 @@ public class Main {
         while (true) {
             System.out.println("동아리 관리자 메뉴 (1: 프로젝트 만들기, 2: 프로젝트 삭제하기, 0: 뒤로가기): ");
             int choice = scanner.nextInt();
-            scanner.nextLine(); // 버퍼 비우기
+            scanner.nextLine();
 
             if (choice == 0) break;
 
@@ -171,11 +274,11 @@ public class Main {
 
                 case 2: // 프로젝트 삭제하기
                     System.out.println("삭제할 프로젝트 이름(Pname): ");
-                    pname = scanner.nextLine();
+                    String pnameDelete = scanner.nextLine();
 
                     PreparedStatement ps2 = con.prepareStatement(
                             "DELETE FROM Project WHERE Pname = ?");
-                    ps2.setString(1, pname);
+                    ps2.setString(1, pnameDelete);
                     ps2.executeUpdate();
                     System.out.println("프로젝트가 삭제되었습니다.");
                     break;
@@ -191,7 +294,7 @@ public class Main {
         while (true) {
             System.out.println("교수 메뉴 (1: 내 정보 입력, 2: 동아리 지도 교수 되기, 0: 뒤로가기): ");
             int choice = scanner.nextInt();
-            scanner.nextLine();
+            scanner.nextLine(); // 버퍼 비우기
 
             if (choice == 0) break;
 
@@ -222,15 +325,15 @@ public class Main {
 
                     PreparedStatement ps2 = con.prepareStatement(
                             "UPDATE Club SET Anumber = ? WHERE Cnum = ?");
-                    ps2.setInt(1, anum);
-                    ps2.setInt(2, cnum);
+                    ps2.setInt(1, anum); // 교수 번호
+                    ps2.setInt(2, cnum); // 동아리 번호
                     ps2.executeUpdate();
                     System.out.println("해당 동아리의 지도 교수가 되었습니다.");
                     break;
 
                 default:
-                    System.out.println("잘못된 입력. 다시 선택해주세요.");
+                    System.out.println("잘못된 입력입니다. 다시 선택해주세요.");
             }
         }
-    }
+        }
 }
